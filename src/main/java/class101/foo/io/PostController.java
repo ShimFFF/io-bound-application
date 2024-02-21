@@ -20,6 +20,7 @@ public class PostController {
     private final PostRepository postRepository;
     private final Producer producer;
     private final ObjectMapper objectMapper;
+    private final PostCacheService postCacheService;
 
     // 1. 글을 작성한다.
     @PostMapping("/post")
@@ -37,9 +38,12 @@ public class PostController {
     
     // 2-2 글 목록을 페이징하여 반환
     @GetMapping("/posts/page")
-    public Page<Post> getPostListPaging(@RequestParam(defaultValue = "1") Integer page) { // default page = 1
-        Pageable pageable = PageRequest.of(page - 1, 10, Sort.by("id").descending());
-        return postRepository.findAll(pageable);
+    public Page<Post> getPostListPaging(@RequestParam(defaultValue = "1") Integer page) {
+        if (page.equals(1)) { // 첫 페이지일 경우 캐시에서 가져옴
+            return postCacheService.getFirstPostPage();
+        } else { // 첫 페이지가 아닐 경우 DB에서 가져옴
+            return postRepository.findAll(PageRequest.of(page - 1, 20, Sort.by("id").descending()));
+        }
     }
     
     // 3. 글 번호로 조회
